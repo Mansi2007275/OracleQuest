@@ -27,7 +27,7 @@ Directives:
 
     // If API key is available, use Gemini's Server-Sent Events / streaming endpoint
     if (apiKey && apiKey !== 'your-gemini-api-key') {
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse&key=${apiKey}`;
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:streamGenerateContent?alt=sse&key=${apiKey}`;
 
       const contents = [
         ...(Array.isArray(history)

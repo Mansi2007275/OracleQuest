@@ -10,7 +10,7 @@ export interface GeminiOptions {
   maxOutputTokens?: number;
 }
 
-const DEFAULT_MODEL = 'gemini-2.0-flash';
+const DEFAULT_MODEL = 'gemini-3.7-flash';
 const DEFAULT_TIMEOUT_MS = 20000; // 20 seconds timeout
 
 /**
