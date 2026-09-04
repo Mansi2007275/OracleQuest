@@ -1,26 +1,225 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+:root {
+  /* Neubrutalism Core Color Palette & Design Tokens */
+  --background: #FFFDF0; /* Warm high-contrast off-white */
+  --foreground: #000000;
+  --card: #FFFFFF;
+  --card-foreground: #000000;
+  --popover: #FFFFFF;
+  --popover-foreground: #000000;
+  --primary: #8A2BE2; /* Somnia Electric Purple */
+  --primary-foreground: #FFFFFF;
+  --secondary: #F5FF00; /* Acid Yellow */
+  --secondary-foreground: #000000;
+  --muted: #E2E8F0;
+  --muted-foreground: #475569;
+  --accent: #00F0FF; /* Electric Cyan */
+  --accent-foreground: #000000;
+  --destructive: #FF3EA5; /* Hot Pink */
+  --border: #000000;
+  --input: #FFFFFF;
+  --ring: #000000;
+  --radius: 4px;
+}
+
+.dark {
+  --background: #FFFDF0;
+  --foreground: #000000;
+  --card: #FFFFFF;
+  --card-foreground: #000000;
+  --popover: #FFFFFF;
+  --popover-foreground: #000000;
+  --primary: #8A2BE2;
+  --primary-foreground: #FFFFFF;
+  --secondary: #F5FF00;
+  --secondary-foreground: #000000;
+  --muted: #E2E8F0;
+  --muted-foreground: #475569;
+  --accent: #00F0FF;
+  --accent-foreground: #000000;
+  --destructive: #FF3EA5;
+  --border: #000000;
+  --input: #FFFFFF;
+  --ring: #000000;
 }
 
 body {
-  background: var(--background);
+  background-color: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+  font-weight: 600;
+}
+
+/* Neubrutalism Hard Utility Classes */
+.nb-box {
+  background-color: #ffffff;
+  border: 3px solid #000000;
+  box-shadow: 4px 4px 0px #000000;
+  border-radius: 4px;
+}
+
+.nb-box-lg {
+  background-color: #ffffff;
+  border: 4px solid #000000;
+  box-shadow: 6px 6px 0px #000000;
+  border-radius: 4px;
+}
+
+.nb-card {
+  background-color: #ffffff;
+  border: 3px solid #000000;
+  box-shadow: 4px 4px 0px #000000;
+  border-radius: 4px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.nb-card:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0px #000000;
+}
+
+.nb-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: 3px solid #000000;
+  box-shadow: 4px 4px 0px #000000;
+  border-radius: 4px;
+  background-color: #F5FF00;
+  color: #000000;
+  transition: all 0.1s ease;
+  cursor: pointer;
+  user-select: none;
+}
+
+.nb-btn:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0px #000000;
+}
+
+.nb-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0px #000000;
+}
+
+.nb-btn-purple {
+  background-color: #8A2BE2;
+  color: #ffffff;
+}
+
+.nb-btn-cyan {
+  background-color: #00F0FF;
+  color: #000000;
+}
+
+.nb-btn-pink {
+  background-color: #FF3EA5;
+  color: #ffffff;
+}
+
+.nb-btn-green {
+  background-color: #00FF66;
+  color: #000000;
+}
+
+.nb-btn-red {
+  background-color: #FF4D4D;
+  color: #ffffff;
+}
+
+.nb-btn-white {
+  background-color: #ffffff;
+  color: #000000;
+}
+
+.nb-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  border: 2px solid #000000;
+  box-shadow: 2px 2px 0px #000000;
+  border-radius: 2px;
+  background-color: #F5FF00;
+  color: #000000;
+}
+
+.nb-input {
+  width: 100%;
+  border: 3px solid #000000;
+  box-shadow: 3px 3px 0px #000000;
+  border-radius: 4px;
+  background-color: #ffffff;
+  color: #000000;
+  font-weight: 700;
+  padding: 0.6rem 0.8rem;
+  transition: all 0.15s ease;
+}
+
+.nb-input:focus {
+  outline: none;
+  box-shadow: 5px 5px 0px #000000;
+  background-color: #FFFDF0;
+}
+
+/* Neubrutalism AI Agent Cards */
+.nb-agent-bull {
+  background-color: #CCFF00;
+  color: #000000;
+  border: 3px solid #000000;
+  box-shadow: 4px 4px 0px #000000;
+}
+
+.nb-agent-bear {
+  background-color: #FF3EA5;
+  color: #ffffff;
+  border: 3px solid #000000;
+  box-shadow: 4px 4px 0px #000000;
+}
+
+.nb-agent-risk {
+  background-color: #F5FF00;
+  color: #000000;
+  border: 3px solid #000000;
+  box-shadow: 4px 4px 0px #000000;
 }
