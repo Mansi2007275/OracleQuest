@@ -10,7 +10,9 @@ export interface GeminiOptions {
   maxOutputTokens?: number;
 }
 
-const DEFAULT_MODEL = 'gemini-3.7-flash';
+const DEFAULT_MODEL = 'gemini-3.6-flash';
+const FALLBACK_MODEL = 'gemini-2.0-flash';
+
 const DEFAULT_TIMEOUT_MS = 20000; // 20 seconds timeout
 
 /**
@@ -33,79 +35,87 @@ export async function askGemini(
     return generateFallbackAnalysis(prompt, systemInstruction);
   }
 
-  const model = options.model || DEFAULT_MODEL;
+  const primaryModel = options.model || DEFAULT_MODEL;
   const timeoutMs = options.timeoutMs || DEFAULT_TIMEOUT_MS;
   const temperature = options.temperature ?? 0.7;
   const maxOutputTokens = options.maxOutputTokens ?? 2048;
 
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  async function callModel(modelName: string): Promise<string> {
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
-  const requestBody: Record<string, any> = {
-    contents: [
-      {
-        role: 'user',
-        parts: [{ text: prompt }],
+    const requestBody: Record<string, any> = {
+      contents: [
+        {
+          role: 'user',
+          parts: [{ text: prompt }],
+        },
+      ],
+      generationConfig: {
+        temperature,
+        maxOutputTokens,
       },
-    ],
-    generationConfig: {
-      temperature,
-      maxOutputTokens,
-    },
-  };
-
-  if (systemInstruction) {
-    requestBody.system_instruction = {
-      parts: [{ text: systemInstruction }],
     };
+
+    if (systemInstruction) {
+      requestBody.system_instruction = {
+        parts: [{ text: systemInstruction }],
+      };
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMsg = errorData?.error?.message || `HTTP ${response.status}: ${response.statusText}`;
+        throw new Error(`Gemini API (${modelName}) Error: ${errorMsg}`);
+      }
+
+      const data = await response.json();
+      const candidate = data?.candidates?.[0];
+
+      if (!candidate) {
+        throw new Error('Gemini API returned no candidates');
+      }
+
+      if (candidate.finishReason === 'SAFETY') {
+        throw new Error('Response was flagged by Gemini safety filters');
+      }
+
+      const textPart = candidate?.content?.parts?.[0]?.text;
+      if (typeof textPart !== 'string') {
+        throw new Error('Invalid or empty content returned by Gemini');
+      }
+
+      return textPart.trim();
+    } catch (err) {
+      clearTimeout(timeoutId);
+      throw err;
+    }
   }
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
   try {
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestBody),
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeoutId);
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      const errorMsg = errorData?.error?.message || `HTTP ${response.status}: ${response.statusText}`;
-      throw new Error(`Gemini API Error: ${errorMsg}`);
+    return await callModel(primaryModel);
+  } catch (firstErr: any) {
+    console.warn(`[Gemini API Warning] Primary model (${primaryModel}) failed: ${firstErr.message}. Retrying with ${FALLBACK_MODEL}...`);
+    try {
+      return await callModel(FALLBACK_MODEL);
+    } catch (secondErr: any) {
+      console.warn(`[Gemini API Warning] Fallback model (${FALLBACK_MODEL}) also failed: ${secondErr.message}. Returning synthetic analysis.`);
+      return generateFallbackAnalysis(prompt, systemInstruction);
     }
-
-    const data = await response.json();
-    const candidate = data?.candidates?.[0];
-
-    if (!candidate) {
-      throw new Error('Gemini API returned no candidates');
-    }
-
-    if (candidate.finishReason === 'SAFETY') {
-      throw new Error('Response was flagged by Gemini safety filters');
-    }
-
-    const textPart = candidate?.content?.parts?.[0]?.text;
-    if (typeof textPart !== 'string') {
-      throw new Error('Invalid or empty content returned by Gemini');
-    }
-
-    return textPart.trim();
-  } catch (error: any) {
-    clearTimeout(timeoutId);
-
-    if (error.name === 'AbortError') {
-      throw new Error(`Gemini API request timed out after ${timeoutMs}ms`);
-    }
-
-    console.error('[Gemini API Error]:', error.message || error);
-    throw error;
   }
 }
 
