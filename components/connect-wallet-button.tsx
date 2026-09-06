@@ -24,15 +24,21 @@ function makeExplorerUrl(address: string) {
 }
 
 export function ConnectWalletButton() {
+  const [mounted, setMounted] = React.useState(false);
   const { address, isConnected, isConnecting } = useAccount();
-  const { connect, connectors, isPending } = useConnect();
+  const { connectAsync, connectors, isPending } = useConnect();
   const { disconnect } = useDisconnect();
   const chainId = useChainId();
   const { switchChain } = useSwitchChain();
 
   const [dropdownOpen, setDropdownOpen] = React.useState(false);
   const [copied, setCopied] = React.useState(false);
+  const [connectError, setConnectError] = React.useState<string | null>(null);
   const dropdownRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   React.useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -47,6 +53,19 @@ export function ConnectWalletButton() {
   const isWrongNetwork = isConnected && chainId !== somniaTestnet.id;
   const isLoading = isConnecting || isPending;
 
+  if (!mounted) {
+    return (
+      <button
+        disabled
+        className="flex items-center gap-2 h-10 px-5 rounded-sm font-mono text-xs font-black uppercase tracking-wider border-3 border-black bg-[#F5FF00] text-black opacity-80 cursor-wait"
+      >
+        <Wallet className="h-4 w-4 shrink-0" />
+        <span>Connect Wallet</span>
+      </button>
+    );
+  }
+
+
   async function handleCopy() {
     if (!address) return;
     await navigator.clipboard.writeText(address);
@@ -55,43 +74,79 @@ export function ConnectWalletButton() {
   }
 
   function handleSwitchNetwork() {
-    switchChain({ chainId: somniaTestnet.id });
-    setDropdownOpen(false);
+    try {
+      switchChain({ chainId: somniaTestnet.id });
+      setDropdownOpen(false);
+    } catch (err: any) {
+      console.error('[Network Switch Error]:', err);
+      setConnectError('Failed to switch network. Please switch to Somnia in MetaMask.');
+      setTimeout(() => setConnectError(null), 5000);
+    }
   }
 
-  function handleConnect() {
-    // Prefer the MetaMask connector from config, fall back to first available
-    const metaMaskConnector = connectors.find(
-      (c) => c.id === 'metaMaskSDK' || c.id === 'metaMask' || c.name === 'MetaMask'
-    );
-    const connector = metaMaskConnector || connectors[0];
-    if (connector) {
-      connect({ connector });
+  async function handleConnect() {
+    setConnectError(null);
+    // Select first available injected/browser connector
+    const connector = connectors[0];
+
+
+    if (!connector) {
+      const msg = 'No EVM wallet extension detected. Please install MetaMask.';
+      console.error('[WalletConnect Error]', msg);
+      setConnectError(msg);
+      setTimeout(() => setConnectError(null), 5000);
+      return;
+    }
+
+    try {
+      console.log(`[WalletConnect] Attempting connection via ${connector.name} (${connector.id})...`);
+      await connectAsync({ connector });
+      console.log('[WalletConnect] Successfully connected!');
+    } catch (err: any) {
+      console.error('[WalletConnect Exception]:', err);
+      const isUserRejected = err?.message?.toLowerCase().includes('reject') || err?.code === 4001;
+      const msg = isUserRejected
+        ? 'Connection request was rejected by user.'
+        : err?.message || 'Wallet connection failed. Check extension status.';
+      setConnectError(msg);
+      setTimeout(() => setConnectError(null), 5000);
     }
   }
 
   // ── Not connected: show Connect button ─────────────────────────
   if (!isConnected) {
     return (
-      <button
-        onClick={handleConnect}
-        disabled={isLoading}
-        className={`
-          flex items-center gap-2 h-10 px-5 rounded-sm font-mono text-xs font-black uppercase tracking-wider
-          border-3 border-black bg-[#F5FF00] text-black shadow-[4px_4px_0px_#000000]
-          hover:shadow-[6px_6px_0px_#000000] hover:-translate-x-0.5 hover:-translate-y-0.5
-          active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0px_#000000]
-          disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer transition-all
-        `}
-        id="connect-wallet-btn"
-      >
-        {isLoading ? (
-          <Loader2 className="h-4 w-4 animate-spin shrink-0" />
-        ) : (
-          <Wallet className="h-4 w-4 shrink-0" />
+      <div className="relative inline-block">
+        <button
+          onClick={handleConnect}
+          disabled={isLoading}
+          className={`
+            flex items-center gap-2 h-10 px-5 rounded-sm font-mono text-xs font-black uppercase tracking-wider
+            border-3 border-black bg-[#F5FF00] text-black shadow-[4px_4px_0px_#000000]
+            hover:shadow-[6px_6px_0px_#000000] hover:-translate-x-0.5 hover:-translate-y-0.5
+            active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0px_#000000]
+            disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer transition-all
+          `}
+          id="connect-wallet-btn"
+        >
+          {isLoading ? (
+            <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+          ) : (
+            <Wallet className="h-4 w-4 shrink-0" />
+          )}
+          <span>{isLoading ? 'Connecting...' : 'Connect Wallet'}</span>
+        </button>
+
+        {connectError && (
+          <div className="absolute right-0 top-12 z-50 w-72 p-2.5 rounded-sm border-2 border-black bg-[#FF3EA5] text-white text-[11px] font-mono font-bold shadow-[4px_4px_0px_#000000] animate-in fade-in slide-in-from-top-1">
+            <div className="flex items-center gap-1.5 mb-1">
+              <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+              <span className="font-black uppercase">Wallet Error</span>
+            </div>
+            {connectError}
+          </div>
         )}
-        <span>{isLoading ? 'Connecting...' : 'Connect Wallet'}</span>
-      </button>
+      </div>
     );
   }
 
